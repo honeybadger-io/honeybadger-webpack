@@ -5,7 +5,11 @@ import HoneybadgerSourceMapPlugin from '../src/HoneybadgerSourceMapPlugin';
 describe('HoneybadgerSourceMapPlugin', function() {
   beforeEach(function() {
     this.compiler = {
-      plugin: createSpy()
+      hooks: {
+        afterEmit: {
+          tapAsync: createSpy(),
+        },
+      },
     };
 
     this.options = {
@@ -41,7 +45,21 @@ describe('HoneybadgerSourceMapPlugin', function() {
   });
 
   describe('apply', function() {
-    it('should hook into `after-emit"', function() {
+    it('should tap into "afterEmit" hook', function() {
+      const { afterEmit } = this.compiler.hooks
+
+      expect(afterEmit.tapAsync.calls.length).toBe(1);
+      expect(afterEmit.tapAsync.calls[0].arguments).toEqual([
+        'HoneybadgerSourceMapPlugin',
+        this.plugin.afterEmit.bind(this.plugin)
+      ]);
+    });
+
+    it('should hook into "after-emit"', function() {
+      this.compiler.hooks = null
+      this.compiler.plugin = createSpy()
+      this.plugin.apply(this.compiler);
+
       expect(this.compiler.plugin.calls.length).toBe(1);
       expect(this.compiler.plugin.calls[0].arguments).toEqual([
         'after-emit',
