@@ -12,6 +12,7 @@ class HoneybadgerSourceMapPlugin {
     assetsUrl,
     revision = "master",
     silent = false,
+    uploadConcurrency = Infinity,
     ignoreErrors = false
   }) {
     this.apiKey = apiKey;
@@ -19,6 +20,7 @@ class HoneybadgerSourceMapPlugin {
     this.revision = revision;
     this.silent = silent;
     this.ignoreErrors = ignoreErrors;
+    this.uploadConcurrency = uploadConcurrency;
   }
 
   afterEmit(compilation, done) {
@@ -111,9 +113,9 @@ class HoneybadgerSourceMapPlugin {
 
   uploadSourceMaps(compilation, done) {
     const assets = this.getAssets(compilation);
-    const upload = this.uploadSourceMap.bind(this, compilation);
+    const tasks = assets.map(asset => done => this.uploadSourceMap(compilation, asset, done));
 
-    async.each(assets, upload, (err, results) => {
+    async.parallelLimit(tasks, this.uploadConcurrency, (err, results) => {
       if (err) {
         return done(err);
       }
