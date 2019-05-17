@@ -39,6 +39,9 @@ These plugin parameters correspond to the [Honeybadger Sourcemap API](https://do
 
   <dt><code>ignoreErrors</code> (optional &mdash; default: "null/false")</dt>
   <dd>If true, webpack compilation errors are treated as warnings.</dd>
+
+  <dt><code>uploadConcurrency</code> (optional &mdash; default: "Infinity")</dt>
+  <dd>The maximum number of upload requests that the plugin will make in parallel. Limiting the number of parallel requests may help prevent upload failures if you have many source map files.</dd>
 </dl>
 
 ### Vanilla webpack.config.js
