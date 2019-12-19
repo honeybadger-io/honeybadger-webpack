@@ -10,7 +10,10 @@
     "prebuild": "npm run -s clean",
     "prepublishOnly": "npm run clean && npm run build && npm run test",
     "test": "nyc mocha --require @babel/register",
-    "test:watch": "npm test -- -w"
+    "test:watch": "npm test -- -w",
+    "preversion": "npm test",
+    "version": "scripts/update-versions.sh",
+    "postversion": "git push && git push --tags"
   },
   "repository": {
     "type": "git",
