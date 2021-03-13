@@ -49,13 +49,13 @@ describe('helpers', function () {
     it('should handle null', function () {
       const result = helpers.handleError(null)
       expect(result).to.be.an('array')
-      expect(result).to.be.empty
+      expect(result.length).to.eq(0)
     })
 
     it('should handle empty []', function () {
       const result = helpers.handleError([])
       expect(result).to.be.an('array')
-      expect(result).to.be.empty
+      expect(result.length).to.eq(0)
     })
   })
 
