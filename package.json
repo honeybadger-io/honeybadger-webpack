@@ -62,9 +62,6 @@
     "request": "^2.88.2",
     "verror": "^1.6.1"
   },
-  "standard": {
-    "parser": "@babel/eslint-parser"
-  },
   "husky": {
     "hooks": {
       "pre-commit": "npm run fix"
