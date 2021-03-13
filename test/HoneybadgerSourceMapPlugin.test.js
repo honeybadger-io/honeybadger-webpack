@@ -1,15 +1,21 @@
 /* eslint-env mocha */
 
-import expect, { createSpy, isSpy, spyOn } from 'expect'
+import chai from 'chai'
+import sinon from 'sinon'
 import nock from 'nock'
 import HoneybadgerSourceMapPlugin from '../src/HoneybadgerSourceMapPlugin'
+import { ENDPOINT, MAX_RETRIES, PLUGIN_NAME } from '../src/constants'
 
-describe('HoneybadgerSourceMapPlugin', function () {
+const expect = chai.expect
+const TEST_ENDPOINT = 'https://api.honeybadger.io'
+const SOURCEMAP_PATH = '/v1/source_maps'
+
+describe(PLUGIN_NAME, function () {
   beforeEach(function () {
     this.compiler = {
       hooks: {
         afterEmit: {
-          tapAsync: createSpy()
+          tapPromise: sinon.spy()
         }
       }
     }
@@ -20,135 +26,147 @@ describe('HoneybadgerSourceMapPlugin', function () {
     }
 
     this.plugin = new HoneybadgerSourceMapPlugin(this.options)
-    this.plugin.apply(this.compiler)
   })
 
   describe('constructor', function () {
     it('should return an instance', function () {
-      expect(this.plugin).toBeA(HoneybadgerSourceMapPlugin)
+      expect(this.plugin).to.be.an.instanceof(HoneybadgerSourceMapPlugin)
     })
 
     it('should set options', function () {
       const options = Object.assign({}, this.options, {
         apiKey: 'other-api-key',
-        assetsUrl: 'https://cdn.example.com/assets'
+        assetsUrl: 'https://cdn.example.com/assets',
+        endpoint: 'https://my-random-endpoint.com'
       })
       const plugin = new HoneybadgerSourceMapPlugin(options)
-      expect(plugin).toInclude(options)
+      expect(plugin).to.include(options)
     })
 
     it('should default silent to false', function () {
-      expect(this.plugin).toInclude({ silent: false })
+      expect(this.plugin).to.include({ silent: false })
     })
 
     it('should default revision to "master"', function () {
-      expect(this.plugin).toInclude({ revision: 'master' })
+      expect(this.plugin).to.include({ revision: 'master' })
+    })
+
+    it('should default retries to 3', function () {
+      expect(this.plugin).to.include({ retries: 3 })
+    })
+
+    it('should default endpoint to https://api.honeybadger.io/v1/source_maps', function () {
+      expect(this.plugin).to.include({ endpoint: ENDPOINT })
+    })
+
+    it('should scale back any retries > 10', function () {
+      const options = { ...this.options, retries: 40 }
+      const plugin = new HoneybadgerSourceMapPlugin(options)
+      expect(plugin).to.include({ retries: MAX_RETRIES })
+    })
+
+    it('should allow users to set retries to 0', function () {
+      const options = { ...this.options, retries: 0 }
+      const plugin = new HoneybadgerSourceMapPlugin(options)
+      expect(plugin).to.include({ retries: 0 })
     })
   })
 
   describe('apply', function () {
-    it('should tap into "afterEmit" hook', function () {
-      const { afterEmit } = this.compiler.hooks
-
-      expect(afterEmit.tapAsync.calls.length).toBe(1)
-      expect(afterEmit.tapAsync.calls[0].arguments).toEqual([
-        'HoneybadgerSourceMapPlugin',
-        this.plugin.afterEmit.bind(this.plugin)
-      ])
-    })
-
     it('should hook into "after-emit"', function () {
-      this.compiler.hooks = null
-      this.compiler.plugin = createSpy()
+      this.compiler.plugin = sinon.stub()
       this.plugin.apply(this.compiler)
 
-      expect(this.compiler.plugin.calls.length).toBe(1)
-      expect(this.compiler.plugin.calls[0].arguments).toEqual([
-        'after-emit',
-        this.plugin.afterEmit.bind(this.plugin)
+      const tapPromise = this.compiler.hooks.afterEmit.tapPromise
+      expect(tapPromise.callCount).to.eq(1)
+
+      const compilerArgs = tapPromise.getCall(0).args
+      compilerArgs[1] = compilerArgs[1].toString()
+
+      expect(compilerArgs).to.include.members([
+        PLUGIN_NAME,
+        compilerArgs[1]
       ])
     })
   })
 
   describe('afterEmit', function () {
-    beforeEach(function () {
-      this.uploadSourceMaps = spyOn(this.plugin, 'uploadSourceMaps')
-        .andCall((compilation, callback) => callback())
-    })
-
     afterEach(function () {
-      if (isSpy(this.uploadSourceMaps)) {
-        this.uploadSourceMaps.restore()
-      }
+      sinon.reset()
     })
 
-    it('should call uploadSourceMaps', function (done) {
+    it('should call uploadSourceMaps', async function () {
       const compilation = {
         errors: [],
         warnings: []
       }
-      this.plugin.afterEmit(compilation, () => {
-        expect(this.uploadSourceMaps.calls.length).toBe(1)
-        expect(compilation.errors.length).toBe(0)
-        expect(compilation.warnings.length).toBe(0)
-        done()
-      })
+
+      sinon.stub(this.plugin, 'uploadSourceMaps')
+
+      await this.plugin.afterEmit(compilation)
+
+      expect(this.plugin.uploadSourceMaps.callCount).to.eq(1)
+      expect(compilation.errors.length).to.eq(0)
+      expect(compilation.warnings.length).to.eq(0)
     })
 
     it('should add upload warnings to compilation warnings, ' +
-      'if ignoreErrors is true and silent is false', function (done) {
+      'if ignoreErrors is true and silent is false', async function () {
       const compilation = {
         errors: [],
         warnings: []
       }
       this.plugin.ignoreErrors = true
       this.plugin.silent = false
-      this.uploadSourceMaps = spyOn(this.plugin, 'uploadSourceMaps')
-        .andCall((comp, callback) => callback(new Error()))
-      this.plugin.afterEmit(compilation, () => {
-        expect(this.uploadSourceMaps.calls.length).toBe(1)
-        expect(compilation.errors.length).toBe(0)
-        expect(compilation.warnings.length).toBe(1)
-        expect(compilation.warnings[0]).toBeA(Error)
-        done()
-      })
+
+      sinon.stub(this.plugin, 'uploadSourceMaps')
+        .callsFake(() => { throw new Error() })
+
+      await this.plugin.afterEmit(compilation)
+
+      expect(this.plugin.uploadSourceMaps.callCount).to.eq(1)
+      expect(compilation.errors.length).to.eq(0)
+      expect(compilation.warnings.length).to.eq(1)
+      expect(compilation.warnings[0]).to.be.an.instanceof(Error)
     })
 
-    it('should not add upload errors to compilation warnings if silent is true', function (done) {
+    it('should not add upload errors to compilation warnings if silent is true', async function () {
       const compilation = {
         errors: [],
         warnings: []
       }
       this.plugin.ignoreErrors = true
       this.plugin.silent = true
-      this.uploadSourceMaps = spyOn(this.plugin, 'uploadSourceMaps')
-        .andCall((comp, callback) => callback(new Error()))
-      this.plugin.afterEmit(compilation, () => {
-        expect(this.uploadSourceMaps.calls.length).toBe(1)
-        expect(compilation.errors.length).toBe(0)
-        expect(compilation.warnings.length).toBe(0)
-        done()
-      })
+
+      sinon.stub(this.plugin, 'uploadSourceMaps')
+        .callsFake(() => { throw new Error() })
+
+      await this.plugin.afterEmit(compilation)
+
+      expect(this.plugin.uploadSourceMaps.callCount).to.eq(1)
+      expect(compilation.errors.length).to.eq(0)
+      expect(compilation.warnings.length).to.eq(0)
     })
 
-    it('should add upload errors to compilation errors', function (done) {
+    it('should add upload errors to compilation errors', async function () {
       const compilation = {
         errors: [],
         warnings: []
       }
       this.plugin.ignoreErrors = false
-      this.uploadSourceMaps = spyOn(this.plugin, 'uploadSourceMaps')
-        .andCall((comp, callback) => callback(new Error()))
-      this.plugin.afterEmit(compilation, () => {
-        expect(this.uploadSourceMaps.calls.length).toBe(1)
-        expect(compilation.warnings.length).toBe(0)
-        expect(compilation.errors.length).toBe(1)
-        expect(compilation.errors[0]).toBeA(Error)
-        done()
-      })
+
+      sinon.stub(this.plugin, 'uploadSourceMaps')
+        .callsFake(() => { throw new Error() })
+
+      await this.plugin.afterEmit(compilation)
+
+      expect(this.plugin.uploadSourceMaps.callCount).to.eq(1)
+      expect(compilation.warnings.length).to.eq(0)
+      expect(compilation.errors.length).to.be.eq(1)
+      expect(compilation.errors[0]).to.be.an.instanceof(Error)
     })
 
-    it('should add validation errors to compilation', function (done) {
+    it('should add validation errors to compilation', async function () {
       const compilation = {
         errors: [],
         warnings: [],
@@ -161,11 +179,14 @@ describe('HoneybadgerSourceMapPlugin', function () {
         revision: 'fab5a8727c70647dcc539318b5b3e9b0cb8ae17b',
         assetsUrl: 'https://cdn.example.com/assets'
       })
-      this.plugin.afterEmit(compilation, () => {
-        expect(this.uploadSourceMaps.calls.length).toBe(0)
-        expect(compilation.errors.length).toBe(1)
-        done()
-      })
+
+      sinon.stub(this.plugin, 'uploadSourceMaps')
+        .callsFake(() => {})
+
+      await this.plugin.afterEmit(compilation)
+
+      expect(this.plugin.uploadSourceMaps.callCount).to.eq(0)
+      expect(compilation.errors.length).to.eq(1)
     })
   })
 
@@ -187,7 +208,7 @@ describe('HoneybadgerSourceMapPlugin', function () {
 
     it('should return an array of js, sourcemap tuples', function () {
       const assets = this.plugin.getAssets(this.compilation)
-      expect(assets).toEqual([
+      expect(assets).to.deep.eq([
         { sourceFile: 'app.81c1.js', sourceMap: 'app.81c1.js.map' }
       ])
     })
@@ -201,7 +222,7 @@ describe('HoneybadgerSourceMapPlugin', function () {
         }
       ]
       const assets = this.plugin.getAssets(this.compilation)
-      expect(assets).toEqual([
+      expect(assets).to.deep.eq([
         { sourceFile: 'app.81c1.js', sourceMap: 'app.81c1.js.map' }
       ])
     })
@@ -214,56 +235,95 @@ describe('HoneybadgerSourceMapPlugin', function () {
         { sourceFile: 'vendor.5190.js', sourceMap: 'vendor.5190.js.map' },
         { sourceFile: 'app.81c1.js', sourceMap: 'app.81c1.js.map' }
       ]
-      this.getAssets = spyOn(this.plugin, 'getAssets').andReturn(this.assets)
-      this.uploadSourceMap = spyOn(this.plugin, 'uploadSourceMap')
-        .andCall((comp, chunk, callback) => callback())
+      sinon.stub(this.plugin, 'getAssets').returns(this.assets)
+      sinon.stub(this.plugin, 'uploadSourceMap')
+        .callsFake(() => {})
     })
 
     afterEach(function () {
-      [this.getAssets, this.uploadSourceMap].forEach((func) => {
-        if (isSpy(func)) {
-          func.restore()
-        }
-      })
+      sinon.restore()
     })
 
-    it('should call uploadSourceMap for each chunk', function (done) {
-      this.plugin.uploadSourceMaps(this.compilation, (err) => {
-        if (err) {
-          return done(err)
-        }
-        expect(this.getAssets.calls.length).toBe(1)
-        expect(this.compilation.errors.length).toBe(0)
-        expect(this.uploadSourceMap.calls.length).toBe(2)
+    it('should call uploadSourceMap for each chunk', async function () {
+      await this.plugin.uploadSourceMaps(this.compilation)
 
-        expect(this.uploadSourceMap.calls[0].arguments[0])
-          .toEqual({ name: 'test', errors: [] })
-        expect(this.uploadSourceMap.calls[0].arguments[1])
-          .toEqual({ sourceFile: 'vendor.5190.js', sourceMap: 'vendor.5190.js.map' })
+      expect(this.plugin.getAssets.callCount).to.eq(1)
+      expect(this.compilation.errors.length).to.eq(0)
+      expect(this.plugin.uploadSourceMap.callCount).to.eq(2)
 
-        expect(this.uploadSourceMap.calls[1].arguments[0])
-          .toEqual({ name: 'test', errors: [] })
-        expect(this.uploadSourceMap.calls[1].arguments[1])
-          .toEqual({ sourceFile: 'app.81c1.js', sourceMap: 'app.81c1.js.map' })
-        done()
-      })
+      expect(this.plugin.uploadSourceMap.getCall(0).args[0])
+        .to.deep.eq({ name: 'test', errors: [] })
+      expect(this.plugin.uploadSourceMap.getCall(0).args[1])
+        .to.deep.eq({ sourceFile: 'vendor.5190.js', sourceMap: 'vendor.5190.js.map' })
+
+      expect(this.plugin.uploadSourceMap.getCall(1).args[0])
+        .to.deep.eq({ name: 'test', errors: [] })
+      expect(this.plugin.uploadSourceMap.getCall(1).args[1])
+        .to.deep.eq({ sourceFile: 'app.81c1.js', sourceMap: 'app.81c1.js.map' })
     })
 
-    it('should call err-back if uploadSourceMap errors', function (done) {
-      this.uploadSourceMap = spyOn(this.plugin, 'uploadSourceMap')
-        .andCall((comp, chunk, callback) => callback(new Error()))
-      this.plugin.uploadSourceMaps(this.compilation, (err, result) => {
-        expect(err).toExist()
-        expect(err).toBeA(Error)
-        expect(result).toBe(undefined)
-        done()
+    it('should throw an error is uploadSourceMap errors', function () {
+      this.plugin.uploadSourceMap.restore()
+
+      const error = new Error()
+      sinon.stub(this.plugin, 'uploadSourceMap')
+        .callsFake(() => {})
+        .rejects(error)
+
+      // Chai doesnt properly async / await rejections, so we gotta work around it
+      // with a...Promise ?!
+      this.plugin.uploadSourceMaps(this.compilation)
+        .catch((err) => expect(err).to.eq(error))
+    })
+
+    context('If no sourcemaps are found', function () {
+      it('Should warn a user if silent is false', async function () {
+        sinon.stub(process.stdout, 'write')
+        this.plugin.getAssets.restore()
+        sinon.stub(this.plugin, 'getAssets').returns([])
+
+        nock(TEST_ENDPOINT)
+          .filteringRequestBody(function (_body) { return '*' })
+          .post(SOURCEMAP_PATH, '*')
+          .reply(200, JSON.stringify({ status: 'OK' }))
+
+        const { compilation } = this
+        this.plugin.silent = false
+
+        await this.plugin.uploadSourceMaps(compilation)
+
+        expect(process.stdout.write.calledWith('No assets found. Nothing will be uploaded.')).to.eq(true)
+
+        // manually called because we overwrite stdout
+        sinon.restore()
+      })
+
+      it('Should not warn a user if silent is true', async function () {
+        sinon.stub(process.stdout, 'write')
+        this.plugin.getAssets.restore()
+        sinon.stub(this.plugin, 'getAssets').returns([])
+
+        nock(TEST_ENDPOINT)
+          .filteringRequestBody(function (_body) { return '*' })
+          .post(SOURCEMAP_PATH, '*')
+          .reply(200, JSON.stringify({ status: 'OK' }))
+
+        const { compilation } = this
+        this.plugin.silent = true
+
+        await this.plugin.uploadSourceMaps(compilation)
+
+        expect(process.stdout.write.notCalled).to.eq(true)
+
+        // manually called because we overwrite stdout
+        sinon.restore()
       })
     })
   })
 
   describe('uploadSourceMap', function () {
     beforeEach(function () {
-      this.info = spyOn(console, 'info')
+      this.info = sinon.stub(console, 'info')
       this.compilation = {
         assets: {
           'vendor.5190.js': { source: () => '/**/' },
@@ -281,104 +341,114 @@ describe('HoneybadgerSourceMapPlugin', function () {
     })
 
     afterEach(function () {
-      this.info.restore()
+      sinon.restore()
     })
 
-    it('should callback without err param if upload is success', function (done) {
+    it('should callback without err param if upload is success', async function () {
       // FIXME/TODO test multipart form body ... it isn't really supported easily by nock
-      const scope = nock('https://api.honeybadger.io') // eslint-disable-line no-unused-vars
-        .filteringRequestBody(function (body) { return '*' })
-        .post('/v1/source_maps', '*')
+      nock(TEST_ENDPOINT)
+        .filteringRequestBody(function (_body) { return '*' })
+        .post(SOURCEMAP_PATH, '*')
         .reply(201, JSON.stringify({ status: 'OK' }))
 
       const { compilation, chunk } = this
-      this.plugin.uploadSourceMap(compilation, chunk, (err) => {
-        if (err) {
-          return done(err)
-        }
-        expect(this.info).toHaveBeenCalledWith('Uploaded vendor.5190.js.map to Honeybadger API')
-        done()
-      })
+
+      await this.plugin.uploadSourceMap(compilation, chunk)
+
+      expect(console.info.calledWith('Uploaded vendor.5190.js.map to Honeybadger API')).to.eq(true)
     })
 
-    it('should not log upload to console if silent option is true', function (done) {
-      const scope = nock('https://api.honeybadger.io') // eslint-disable-line no-unused-vars
-        .filteringRequestBody(function (body) { return '*' })
-        .post('/v1/source_maps', '*')
+    it('should not log upload to console if silent option is true', async function () {
+      nock(TEST_ENDPOINT)
+        .filteringRequestBody(function (_body) { return '*' })
+        .post(SOURCEMAP_PATH, '*')
         .reply(201, JSON.stringify({ status: 'OK' }))
 
       const { compilation, chunk } = this
       this.plugin.silent = true
-      this.plugin.uploadSourceMap(compilation, chunk, (err) => {
-        if (err) {
-          return done(err)
-        }
-        expect(this.info).toNotHaveBeenCalled()
-        done()
-      })
+
+      await this.plugin.uploadSourceMap(compilation, chunk)
+
+      expect(this.info.notCalled).to.eq(true)
     })
 
-    it('should log upload to console if silent option is false', function (done) {
-      const scope = nock('https://api.honeybadger.io') // eslint-disable-line no-unused-vars
-        .filteringRequestBody(function (body) { return '*' })
-        .post('/v1/source_maps', '*')
+    it('should log upload to console if silent option is false', async function () {
+      nock(TEST_ENDPOINT)
+        .filteringRequestBody(function (_body) { return '*' })
+        .post(SOURCEMAP_PATH, '*')
         .reply(201, JSON.stringify({ status: 'OK' }))
 
       const { compilation, chunk } = this
       this.plugin.silent = false
-      this.plugin.uploadSourceMap(compilation, chunk, (err) => {
-        if (err) {
-          return done(err)
-        }
-        expect(this.info).toHaveBeenCalledWith('Uploaded vendor.5190.js.map to Honeybadger API')
-        done()
-      })
+
+      await this.plugin.uploadSourceMap(compilation, chunk)
+
+      expect(this.info.calledWith('Uploaded vendor.5190.js.map to Honeybadger API')).to.eq(true)
     })
 
-    it('should return error message if failure response includes message', function (done) {
-      const scope = nock('https://api.honeybadger.io') // eslint-disable-line no-unused-vars
-        .filteringRequestBody(function (body) { return '*' })
-        .post('/v1/source_maps', '*')
-        .reply(422, JSON.stringify({ error: 'The "source_map" parameter is required' }))
+    it('should return error message if failure response includes message', function () {
+      nock(TEST_ENDPOINT)
+        .filteringRequestBody(function (_body) { return '*' })
+        .post(SOURCEMAP_PATH, '*')
+        .reply(
+          422,
+          JSON.stringify({ error: 'The "source_map" parameter is required' })
+        )
 
       const { compilation, chunk } = this
-      this.plugin.uploadSourceMap(compilation, chunk, (err) => {
-        expect(err).toExist()
-        expect(err).toInclude({
+
+      this.plugin.uploadSourceMap(compilation, chunk).catch((err) => {
+        expect(err).to.deep.include({
           message: 'failed to upload vendor.5190.js.map to Honeybadger API: The "source_map" parameter is required'
         })
-        done()
       })
     })
 
-    it('should handle error response with empty body', function (done) {
-      const scope = nock('https://api.honeybadger.io') // eslint-disable-line no-unused-vars
-        .filteringRequestBody(function (body) { return '*' })
-        .post('/v1/source_maps', '*')
+    it('should handle error response with empty body', function () {
+      nock(TEST_ENDPOINT)
+        .filteringRequestBody(function (_body) { return '*' })
+        .post(SOURCEMAP_PATH, '*')
         .reply(422, null)
 
       const { compilation, chunk } = this
-      this.plugin.uploadSourceMap(compilation, chunk, (err) => {
-        expect(err).toExist()
-        expect(err.message).toMatch(/failed to upload vendor\.5190.js\.map to Honeybadger API: [\w\s]+/)
-        done()
+
+      this.plugin.uploadSourceMap(compilation, chunk).catch((err) => {
+        expect(err.message).to.match(/failed to upload vendor\.5190.js\.map to Honeybadger API: [\w\s]+/)
       })
     })
 
-    it('should handle HTTP request error', function (done) {
-      const scope = nock('https://api.honeybadger.io') // eslint-disable-line no-unused-vars
-        .filteringRequestBody(function (body) { return '*' })
-        .post('/v1/source_maps', '*')
+    it('should handle HTTP request error', function () {
+      nock(TEST_ENDPOINT)
+        .filteringRequestBody(function (_body) { return '*' })
+        .post(SOURCEMAP_PATH, '*')
         .replyWithError('something awful happened')
 
       const { compilation, chunk } = this
-      this.plugin.uploadSourceMap(compilation, chunk, (err) => {
-        expect(err).toExist()
-        expect(err).toInclude({
+
+      this.plugin.uploadSourceMap(compilation, chunk).catch((err) => {
+        expect(err).to.deep.include({
           message: 'failed to upload vendor.5190.js.map to Honeybadger API: something awful happened'
         })
-        done()
       })
     })
+
+    it('should make a request to a configured endpoint', async function () {
+      const endpoint = 'https://my-special-endpoint'
+      const plugin = new HoneybadgerSourceMapPlugin({ ...this.options, endpoint: `${endpoint}${SOURCEMAP_PATH}` })
+      nock(endpoint)
+        .filteringRequestBody(function (_body) { return '*' })
+        .post(SOURCEMAP_PATH, '*')
+        .reply(201, JSON.stringify({ status: 'OK' }))
+
+      const { compilation, chunk } = this
+
+      await plugin.uploadSourceMap(compilation, chunk)
+      expect(this.info.calledWith('Uploaded vendor.5190.js.map to Honeybadger API')).to.eq(true)
+    })
+
+    // TODO: Nock doesnt play nicely with fetchRetry so unfortunately, it doesnt appear possible
+    // to mock the functionality short of having a server listen for responses.
+    // We could rewrite add MSW, but not sure its worth the hassle considering we're
+    // essentially testing the package
   })
 })

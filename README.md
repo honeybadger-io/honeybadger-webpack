@@ -31,6 +31,11 @@ These plugin parameters correspond to the [Honeybadger Sourcemap API](https://do
   <dt><code>assetsUrl</code> (required)</dt>
   <dd>The base URL to production assets (scheme://host/path)<code>*</code><a href="https://docs.honeybadger.io/guides/source-maps.html#wildcards">wildcards</a> are supported. The plugin combines <code>assetsUrl</code> with the generated minified js file name to build the API parameter <code>minified_url</code></dd>
 
+  <dt><code>endpoint</code> (optional &mdash; default: "https://api.honeybadger.io/v1/source_maps")</dt>
+  <dd>Where to upload your sourcemaps to. Perhaps you have a self hosted
+  sourcemap server you would like to serve your sourcemaps from instead
+  of honeybadger.</dd>
+
   <dt><code>revision</code> (optional &mdash; default: "master")</dt>
   <dd>The deploy revision (i.e. commit sha) that your source map applies to. This could also be a code version. For best results, set it to something unique every time your code changes.</dd>
 
@@ -39,6 +44,13 @@ These plugin parameters correspond to the [Honeybadger Sourcemap API](https://do
 
   <dt><code>ignoreErrors</code> (optional &mdash; default: "null/false")</dt>
   <dd>If true, webpack compilation errors are treated as warnings.</dd>
+
+  <dt><code>retries</code> (optional &mdash; default: 3, max: 10)</dt>
+  <dd>This package implements fetch retry functionality via
+  https://github.com/vercel/fetch-retry </br>
+  Retrying helps fix issues like `ECONNRESET` and `SOCKETTIMEOUT`
+  errors and retries on 429 and 500 errors as well.
+  </dd>
 </dl>
 
 ### Vanilla webpack.config.js
