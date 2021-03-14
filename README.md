@@ -33,7 +33,7 @@ These plugin parameters correspond to the [Honeybadger Sourcemap API](https://do
 
   <dt><code>endpoint</code> (optional &mdash; default: "https://api.honeybadger.io/v1/source_maps")</dt>
   <dd>Where to upload your sourcemaps to. Perhaps you have a self hosted
-  sourcemap server you would like to serve your sourcemaps from instead
+  sourcemap server you would like to upload your sourcemaps to instead
   of honeybadger.</dd>
 
   <dt><code>revision</code> (optional &mdash; default: "master")</dt>
