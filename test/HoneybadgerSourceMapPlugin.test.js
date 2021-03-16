@@ -262,7 +262,7 @@ describe(PLUGIN_NAME, function () {
         .to.deep.eq({ sourceFile: 'app.81c1.js', sourceMap: 'app.81c1.js.map' })
     })
 
-    it('should throw an error is uploadSourceMap errors', function () {
+    it('should throw an error if the uploadSourceMap function returns an error', function () {
       this.plugin.uploadSourceMap.restore()
 
       const error = new Error()

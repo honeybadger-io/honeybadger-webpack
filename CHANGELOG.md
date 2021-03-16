@@ -6,7 +6,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.0] - 2019-12-18
+### Changed
+
+- Adds retry functionality for fetch requests via
+  [fetch-retry](https://github.com/vercel/fetch-retry)
+
+- Adds a retry option that defaults to 3, with a max number of retries
+  of 10.
+
+- Adds a warning if no assets will be uploaded
+
+- Adds a configurable `endpoint` to the constructor, defaults to
+  `https://api.honeybadger.io/v1/source_maps`
+
+### Fixed
+
+- fetch separates response errors from network errors.
+  400+ status codes are treated separately from actual network errors.
+
+- Should see a reduction in `ECONNRESET` and `SOCKETTIMEOUT` errors by
+  using `fetch-retry`
+
 ### Changed
 - [Requires Webpack 4.39] Use assetEmitted hook to mitigate `futureEmitAssets = true` -@qnighy (#122)
 
