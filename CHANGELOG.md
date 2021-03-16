@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Added
 
 - Adds retry functionality for fetch requests via
   [fetch-retry](https://github.com/vercel/fetch-retry)
