@@ -62,7 +62,13 @@ class HoneybadgerSourceMapPlugin {
 
     return reduce(chunks, (result, chunk) => {
       const sourceFile = find(chunk.files, file => /\.js$/.test(file))
-      const sourceMap = find(chunk.files, file => /\.js\.map$/.test(file))
+
+      // webpack 5 stores source maps in `chunk.auxiliaryFiles` while webpack 4
+      // stores them in `chunk.files`. This allows both webpack versions to work
+      // with this plugin.
+      const sourceMap = (chunk.auxiliaryFiles || chunk.files).find(file =>
+        /\.js\.map$/.test(file)
+      )
 
       if (!sourceFile || !sourceMap) {
         return result

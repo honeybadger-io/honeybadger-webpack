@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   400+ status codes are treated separately from actual network errors.
 - Attempt to reduce `ECONNRESET` and `SOCKETTIMEOUT` errors by
   using `fetch-retry`
+- Fix Webpack 5 compatibility
 
 ## [1.2.0] - 2019-12-18
 ### Changed

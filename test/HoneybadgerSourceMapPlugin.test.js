@@ -227,6 +227,22 @@ describe(PLUGIN_NAME, function () {
         { sourceFile: 'app.81c1.js', sourceMap: 'app.81c1.js.map' }
       ])
     })
+
+    it('should get the source map files from auxiliaryFiles', function () {
+      this.chunks = [
+        {
+          id: 0,
+          names: ['vendor'],
+          files: ['vendor.5190.js'],
+          auxiliaryFiles: ['vendor.5190.js.map']
+        }
+      ]
+
+      const assets = this.plugin.getAssets(this.compilation)
+      expect(assets).to.deep.eq([
+        { sourceFile: 'vendor.5190.js', sourceMap: 'vendor.5190.js.map' }
+      ])
+    })
   })
 
   describe('uploadSourceMaps', function () {
