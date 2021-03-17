@@ -55,7 +55,7 @@ describe(PLUGIN_NAME, function () {
     it('should default retries to 3', function () {
       expect(this.plugin).to.include({ retries: 3 })
     })
-    
+
     it('should default endpoint to https://api.honeybadger.io/v1/source_maps', function () {
       expect(this.plugin).to.include({ endpoint: ENDPOINT })
     })
@@ -70,7 +70,6 @@ describe(PLUGIN_NAME, function () {
       const options = { ...this.options, retries: 0 }
       const plugin = new HoneybadgerSourceMapPlugin(options)
       expect(plugin).to.include({ retries: 0 })
-
     })
   })
 
