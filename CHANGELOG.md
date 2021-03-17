@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add a warning if no assets will be uploaded
 - Add a configurable `endpoint` to the constructor, defaults to
   `https://api.honeybadger.io/v1/source_maps`
+- Add a check for auxiliary files for Webpack 5 compatibility
+- Add Webpack 5 compatibility
+- Make Webpack 4+ a peerDependency
 
 ### Fixed
 - fetch separates response errors from network errors.

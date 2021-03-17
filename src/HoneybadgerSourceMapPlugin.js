@@ -1,3 +1,5 @@
+import { promises as fs } from 'fs'
+import { join } from 'path'
 import nodeFetch from 'node-fetch'
 import fetchRetry from '@vercel/fetch-retry'
 import VError from 'verror'
@@ -57,12 +59,30 @@ class HoneybadgerSourceMapPlugin {
     compiler.hooks.afterEmit.tapPromise(PLUGIN_NAME, this.afterEmit.bind(this))
   }
 
+  // eslint-disable-next-line class-methods-use-this
+  getAssetPath (compilation, name) {
+    return join(
+      compilation.getPath(compilation.compiler.outputPath),
+      name.split('?')[0]
+    )
+  }
+
+  getSource (compilation, name) {
+    const path = this.getAssetPath(compilation, name)
+    return fs.readFile(path, { encoding: 'utf-8' })
+  }
+
   getAssets (compilation) {
     const { chunks } = compilation.getStats().toJson()
 
     return reduce(chunks, (result, chunk) => {
       const sourceFile = find(chunk.files, file => /\.js$/.test(file))
-      const sourceMap = find(chunk.files, file => /\.js\.map$/.test(file))
+
+      // Webpack 4 using chunk.files, Webpack 5 uses chunk.auxiliaryFiles
+      // https://webpack.js.org/blog/2020-10-10-webpack-5-release/#stats
+      const sourceMap = (chunk.auxiliaryFiles || chunk.files).find(file =>
+        /\.js\.map$/.test(file)
+      )
 
       if (!sourceFile || !sourceMap) {
         return result
@@ -85,17 +105,25 @@ class HoneybadgerSourceMapPlugin {
 
   async uploadSourceMap (compilation, { sourceFile, sourceMap }) {
     const errorMessage = `failed to upload ${sourceMap} to Honeybadger API`
-    // This should be looked at to use this instead:
-    // https://github.com/thredup/rollbar-sourcemap-webpack-plugin/blob/master/src/RollbarSourceMapPlugin.js#L122
+
+    let sourceMapSource
+    let sourceFileSource
+
+    try {
+      sourceMapSource = await this.getSource(compilation, sourceMap)
+      sourceFileSource = await this.getSource(compilation, sourceFile)
+    } catch (err) {
+      throw new VError(err, err.message)
+    }
 
     const form = new FormData()
     form.append('api_key', this.apiKey)
     form.append('minified_url', this.getUrlToAsset(sourceFile))
-    form.append('minified_file', (this.emittedAssets.get(sourceFile) || compilation.assets[sourceFile].source()), {
+    form.append('minified_file', sourceFileSource, {
       filename: sourceFile,
       contentType: 'application/javascript'
     })
-    form.append('source_map', (this.emittedAssets.get(sourceMap) || compilation.assets[sourceMap].source()), {
+    form.append('source_map', sourceMapSource, {
       filename: sourceMap,
       contentType: 'application/octet-stream'
     })
