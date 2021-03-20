@@ -3,6 +3,8 @@
 import chai from 'chai'
 import sinon from 'sinon'
 import nock from 'nock'
+
+import { promises as fs } from 'fs'
 import HoneybadgerSourceMapPlugin from '../src/HoneybadgerSourceMapPlugin'
 import { ENDPOINT, MAX_RETRIES, PLUGIN_NAME } from '../src/constants'
 
@@ -227,6 +229,22 @@ describe(PLUGIN_NAME, function () {
         { sourceFile: 'app.81c1.js', sourceMap: 'app.81c1.js.map' }
       ])
     })
+
+    it('should get the source map files from auxiliaryFiles in Webpack 5', function () {
+      this.chunks = [
+        {
+          id: 0,
+          names: ['vendor'],
+          files: ['vendor.5190.js'],
+          auxiliaryFiles: ['vendor.5190.js.map']
+        }
+      ]
+
+      const assets = this.plugin.getAssets(this.compilation)
+      expect(assets).to.deep.eq([
+        { sourceFile: 'vendor.5190.js', sourceMap: 'vendor.5190.js.map' }
+      ])
+    })
   })
 
   describe('uploadSourceMaps', function () {
@@ -324,21 +342,28 @@ describe(PLUGIN_NAME, function () {
 
   describe('uploadSourceMap', function () {
     beforeEach(function () {
+      this.outputPath = '/fake/output/path'
       this.info = sinon.stub(console, 'info')
       this.compilation = {
         assets: {
-          'vendor.5190.js': { source: () => '/**/' },
-          'vendor.5190.js.map': { source: () => '{"version":3,"file":"vendor.5190.js","sources":["vendor.js"],"names":[],mappings:""}' },
-          'app.81c1.js': { source: () => '/**/' },
-          'app.81c1.js.map': { source: () => '{"version":3,"file":"app.81c1.js","sources":["app.js"],"names":[],mappings:""}' }
+          'vendor.5190.js.map': { source: () => '{"version":3,"sources":[]' },
+          'app.81c1.js.map': { source: () => '{"version":3,"sources":[]' }
         },
-        errors: []
+        compiler: {
+          outputPath: this.outputPath
+        },
+        errors: [],
+        getPath: () => this.outputPath
       }
 
       this.chunk = {
         sourceFile: 'vendor.5190.js',
         sourceMap: 'vendor.5190.js.map'
       }
+
+      this.spyReadFile = sinon
+        .stub(fs, 'readFile')
+        .callsFake(() => Promise.resolve('data'))
     })
 
     afterEach(function () {
@@ -348,8 +373,7 @@ describe(PLUGIN_NAME, function () {
     it('should callback without err param if upload is success', async function () {
       // FIXME/TODO test multipart form body ... it isn't really supported easily by nock
       nock(TEST_ENDPOINT)
-        .filteringRequestBody(function (_body) { return '*' })
-        .post(SOURCEMAP_PATH, '*')
+        .post(SOURCEMAP_PATH)
         .reply(201, JSON.stringify({ status: 'OK' }))
 
       const { compilation, chunk } = this
@@ -361,8 +385,7 @@ describe(PLUGIN_NAME, function () {
 
     it('should not log upload to console if silent option is true', async function () {
       nock(TEST_ENDPOINT)
-        .filteringRequestBody(function (_body) { return '*' })
-        .post(SOURCEMAP_PATH, '*')
+        .post(SOURCEMAP_PATH)
         .reply(201, JSON.stringify({ status: 'OK' }))
 
       const { compilation, chunk } = this
@@ -375,8 +398,7 @@ describe(PLUGIN_NAME, function () {
 
     it('should log upload to console if silent option is false', async function () {
       nock(TEST_ENDPOINT)
-        .filteringRequestBody(function (_body) { return '*' })
-        .post(SOURCEMAP_PATH, '*')
+        .post(SOURCEMAP_PATH)
         .reply(201, JSON.stringify({ status: 'OK' }))
 
       const { compilation, chunk } = this
@@ -389,8 +411,7 @@ describe(PLUGIN_NAME, function () {
 
     it('should return error message if failure response includes message', function () {
       nock(TEST_ENDPOINT)
-        .filteringRequestBody(function (_body) { return '*' })
-        .post(SOURCEMAP_PATH, '*')
+        .post(SOURCEMAP_PATH)
         .reply(
           422,
           JSON.stringify({ error: 'The "source_map" parameter is required' })
@@ -407,8 +428,7 @@ describe(PLUGIN_NAME, function () {
 
     it('should handle error response with empty body', function () {
       nock(TEST_ENDPOINT)
-        .filteringRequestBody(function (_body) { return '*' })
-        .post(SOURCEMAP_PATH, '*')
+        .post(SOURCEMAP_PATH)
         .reply(422, null)
 
       const { compilation, chunk } = this
@@ -420,8 +440,7 @@ describe(PLUGIN_NAME, function () {
 
     it('should handle HTTP request error', function () {
       nock(TEST_ENDPOINT)
-        .filteringRequestBody(function (_body) { return '*' })
-        .post(SOURCEMAP_PATH, '*')
+        .post(SOURCEMAP_PATH)
         .replyWithError('something awful happened')
 
       const { compilation, chunk } = this

@@ -63,6 +63,9 @@
     "node-fetch": "^2.6.1",
     "verror": "^1.6.1"
   },
+  "peerDependencies": {
+    "webpack": ">= 4.0.0"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "npm run fix"
