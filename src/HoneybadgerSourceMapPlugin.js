@@ -194,7 +194,7 @@ class HoneybadgerSourceMapPlugin {
   }
 
   get noAssetsFoundMessage () {
-    return 'Honeybadger could not find any sourcemaps. Nothing will be uploaded.'
+    return '\nHoneybadger could not find any sourcemaps. Nothing will be uploaded.'
   }
 }
 
