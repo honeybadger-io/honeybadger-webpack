@@ -180,17 +180,21 @@ class HoneybadgerSourceMapPlugin {
       // this is also an open issue on Rollbar sourcemap plugin
       // https://github.com/thredup/rollbar-sourcemap-webpack-plugin/issues/39
       if (!this.silent) {
-        process.stdout.write('No assets found. Nothing will be uploaded.')
+        console.info(this.noAssetsFoundMessage)
       }
 
       return
     }
 
-    process.stdout.write('\n')
+    console.info('\n')
 
     return Promise.all(
       assets.map(asset => this.uploadSourceMap(compilation, asset))
     )
+  }
+
+  get noAssetsFoundMessage () {
+    return 'Honeybadger could not find any sourcemaps. Nothing will be uploaded.'
   }
 }
 

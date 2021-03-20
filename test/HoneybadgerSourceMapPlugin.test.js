@@ -297,9 +297,9 @@ describe(PLUGIN_NAME, function () {
 
     context('If no sourcemaps are found', function () {
       it('Should warn a user if silent is false', async function () {
-        sinon.stub(process.stdout, 'write')
         this.plugin.getAssets.restore()
         sinon.stub(this.plugin, 'getAssets').returns([])
+        const info = sinon.stub(console, 'info')
 
         nock(TEST_ENDPOINT)
           .filteringRequestBody(function (_body) { return '*' })
@@ -311,20 +311,16 @@ describe(PLUGIN_NAME, function () {
 
         await this.plugin.uploadSourceMaps(compilation)
 
-        expect(process.stdout.write.calledWith('No assets found. Nothing will be uploaded.')).to.eq(true)
-
-        // manually called because we overwrite stdout
-        sinon.restore()
+        expect(info.calledWith(this.plugin.noAssetsFoundMessage)).to.eq(true)
       })
 
       it('Should not warn a user if silent is true', async function () {
-        sinon.stub(process.stdout, 'write')
         this.plugin.getAssets.restore()
         sinon.stub(this.plugin, 'getAssets').returns([])
+        const info = sinon.stub(console, 'info')
 
         nock(TEST_ENDPOINT)
-          .filteringRequestBody(function (_body) { return '*' })
-          .post(SOURCEMAP_PATH, '*')
+          .post(SOURCEMAP_PATH)
           .reply(200, JSON.stringify({ status: 'OK' }))
 
         const { compilation } = this
@@ -332,10 +328,7 @@ describe(PLUGIN_NAME, function () {
 
         await this.plugin.uploadSourceMaps(compilation)
 
-        expect(process.stdout.write.notCalled).to.eq(true)
-
-        // manually called because we overwrite stdout
-        sinon.restore()
+        expect(info.notCalled).to.eq(true)
       })
     })
   })
@@ -456,8 +449,7 @@ describe(PLUGIN_NAME, function () {
       const endpoint = 'https://my-special-endpoint'
       const plugin = new HoneybadgerSourceMapPlugin({ ...this.options, endpoint: `${endpoint}${SOURCEMAP_PATH}` })
       nock(endpoint)
-        .filteringRequestBody(function (_body) { return '*' })
-        .post(SOURCEMAP_PATH, '*')
+        .post(SOURCEMAP_PATH)
         .reply(201, JSON.stringify({ status: 'OK' }))
 
       const { compilation, chunk } = this
