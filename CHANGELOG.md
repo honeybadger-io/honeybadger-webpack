@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [fetch-retry](https://github.com/vercel/fetch-retry)
 - Add a retry option that defaults to 3, with a max number of retries
   of 10.
-- Add a warning if no assets will be uploaded
+- Add a warning if no assets will be uploaded. Uses console.info instead
+of process.stdout.write.
 - Add a configurable `endpoint` to the constructor, defaults to
   `https://api.honeybadger.io/v1/source_maps`
 
