@@ -7,9 +7,16 @@ import find from 'lodash.find'
 import reduce from 'lodash.reduce'
 import FormData from 'form-data'
 import { handleError, validateOptions } from './helpers'
-import { ENDPOINT, PLUGIN_NAME, MAX_RETRIES } from './constants'
+import { ENDPOINT, DEPLOY_ENDPOINT, PLUGIN_NAME, MAX_RETRIES } from './constants'
 
 const fetch = fetchRetry(nodeFetch)
+
+/**
+ * @typedef {Object} DeployObject
+ * @property {?string} environment - production, development, staging, etc
+ * @property {?string} repository - URL for repository IE: https://github.com/foo/bar
+ * @property {?string} localUsername - The name of the user deploying. IE: Jane
+ */
 
 class HoneybadgerSourceMapPlugin {
   constructor ({
@@ -19,7 +26,8 @@ class HoneybadgerSourceMapPlugin {
     revision = 'master',
     silent = false,
     ignoreErrors = false,
-    retries = 3
+    retries = 3,
+    deploy = {}
   }) {
     this.apiKey = apiKey
     this.assetsUrl = assetsUrl
@@ -28,6 +36,9 @@ class HoneybadgerSourceMapPlugin {
     this.silent = silent
     this.ignoreErrors = ignoreErrors
     this.emittedAssets = new Map()
+
+    /** @type DeployObject */
+    this.deploy = deploy;
 
     this.retries = retries
 
@@ -53,6 +64,8 @@ class HoneybadgerSourceMapPlugin {
         compilation.warnings.push(...handleError(err))
       }
     }
+
+    await this.sendDeployNotification()
   }
 
   apply (compiler) {
@@ -193,6 +206,58 @@ class HoneybadgerSourceMapPlugin {
     )
   }
 
+  async sendDeployNotification() {
+    const { environment, localUsername, repository } = this.deploy
+    const { apiKey, revision } = this
+
+    const isNull = (param) => param == null
+
+    // If any of the keys are null, dont bother sending a fetch request
+    if ([apiKey, revision, environment, localUsername, repository].some(isNull)) {
+      return
+    }
+
+    const form = new FormData()
+    form.append('api_key', apiKey)
+    form.append('revision', revision)
+    form.append('repository', repository)
+    form.append('local_username', localUsername)
+    form.append('environment', environment)
+
+    let error
+
+    try {
+      res = await fetch(DEPLOY_ENDPOINT, {
+        method: 'POST',
+        body: form,
+        redirect: 'follow',
+        opts: {
+          retries: this.retries,
+          // Max timeout between retries, in milliseconds
+          maxTimeout: 1000
+        }
+      })
+
+      if (res.ok) {
+        if (!this.silent) {
+          console.info("Honeybadger has successfully sent a deploy notification")
+        }
+      } else {
+        error = res
+      }
+    } catch(err) {
+      error = err
+    }
+
+    if (error && !this.silent) {
+      console.info(`
+        Honeybadger was unable to send a deploy notification for the following reason:
+        \n\n
+        ${error}
+        \n\n
+      `)
+    }
+  }
   get noAssetsFoundMessage () {
     return '\nHoneybadger could not find any sourcemaps. Nothing will be uploaded.'
   }
