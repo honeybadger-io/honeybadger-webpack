@@ -206,7 +206,7 @@ class HoneybadgerSourceMapPlugin {
     )
   }
 
-  async sendDeployNotification() {
+  async sendDeployNotification () {
     const { environment, localUsername, repository } = this.deploy
     const { apiKey, revision } = this
 
@@ -224,7 +224,8 @@ class HoneybadgerSourceMapPlugin {
     form.append('local_username', localUsername)
     form.append('environment', environment)
 
-    let error
+    const errorMessage = 'Unable to send deploy notification to Honeybadger API.'
+    let res
 
     try {
       res = await fetch(DEPLOY_ENDPOINT, {
@@ -237,27 +238,39 @@ class HoneybadgerSourceMapPlugin {
           maxTimeout: 1000
         }
       })
-
-      if (res.ok) {
-        if (!this.silent) {
-          console.info("Honeybadger has successfully sent a deploy notification")
-        }
-      } else {
-        error = res
+    } catch (err) {
+      // network / operational errors. Does not include 404 / 500 errors
+      if (!this.ignoreErrors) {
+        throw new VError(err, errorMessage)
       }
-    } catch(err) {
-      error = err
     }
 
-    if (error && !this.silent) {
-      console.info(`
-        Honeybadger was unable to send a deploy notification for the following reason:
-        \n\n
-        ${error}
-        \n\n
-      `)
+    // >= 400 responses
+    if (!res.ok) {
+      // Attempt to parse error details from response
+      let details
+      try {
+        const body = await res.json()
+
+        if (body && body.error) {
+          details = body.error
+        } else {
+          details = `${res.status} - ${res.statusText}`
+        }
+      } catch (parseErr) {
+        details = `${res.status} - ${res.statusText}`
+      }
+
+      if (!this.ignoreErrors) {
+        throw new Error(`${errorMessage}: ${details}`)
+      }
+    }
+
+    if (!this.silent) {
+      console.info('Successfully sent deploy notification to Honeybadger API.')
     }
   }
+
   get noAssetsFoundMessage () {
     return '\nHoneybadger could not find any sourcemaps. Nothing will be uploaded.'
   }

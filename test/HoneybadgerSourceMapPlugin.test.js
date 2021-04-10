@@ -458,9 +458,17 @@ describe(PLUGIN_NAME, function () {
       expect(this.info.calledWith('Uploaded vendor.5190.js.map to Honeybadger API')).to.eq(true)
     })
 
-    // TODO: Nock doesnt play nicely with fetchRetry so unfortunately, it doesnt appear possible
-    // to mock the functionality short of having a server listen for responses.
-    // We could rewrite add MSW, but not sure its worth the hassle considering we're
-    // essentially testing the package
+    describe('sendDeployNotification', function () {
+      it('should send a deploy notification if all keys are present', async function () {
+        const endpoint = 'https://api.honeybadger.io'
+        const plugin = new HoneybadgerSourceMapPlugin({ ...this.options })
+        nock(endpoint)
+          .post('/deploys')
+          .reply(201, JSON.stringify({ status: 'OK' }))
+
+        await plugin.sendDeployNotification()
+        expect(this.info.calledWith('')).to.eq(true)
+      })
+    })
   })
 })
