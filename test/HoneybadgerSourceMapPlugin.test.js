@@ -6,7 +6,7 @@ import nock from 'nock'
 
 import { promises as fs } from 'fs'
 import HoneybadgerSourceMapPlugin from '../src/HoneybadgerSourceMapPlugin'
-import { ENDPOINT, MAX_RETRIES, PLUGIN_NAME } from '../src/constants'
+import { ENDPOINT, MAX_RETRIES, MIN_WORKER_COUNT, PLUGIN_NAME } from '../src/constants'
 
 const expect = chai.expect
 
@@ -56,6 +56,15 @@ describe(PLUGIN_NAME, function () {
 
     it('should default retries to 3', function () {
       expect(this.plugin).to.include({ retries: 3 })
+    })
+
+    it('should default workerCount to 5', function () {
+      expect(this.plugin).to.include({ workerCount: 5 })
+    })
+
+    it('should default a minimum worker count', function () {
+      const plugin = new HoneybadgerSourceMapPlugin({ workerCount: -1 })
+      expect(plugin).to.include({ workerCount: MIN_WORKER_COUNT })
     })
 
     it('should default endpoint to https://api.honeybadger.io/v1/source_maps', function () {

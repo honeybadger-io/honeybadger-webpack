@@ -51,6 +51,12 @@ These plugin parameters correspond to the [Honeybadger Sourcemap API](https://do
   Retrying helps fix issues like `ECONNRESET` and `SOCKETTIMEOUT`
   errors and retries on 429 and 500 errors as well.
   </dd>
+
+  <dt><code>workerCount</code> (optional &mdash; default: 5, min: 1)</dt>
+  <dd>Sourcemaps are uploaded in parallel by a configurable number of 
+  workers. Increase or decrease this value to configure how many sourcemaps
+  are being uploaded in parallel.</br>
+  Limited parallelism helps with connection issues in Docker environments.</dd>
 </dl>
 
 ### Vanilla webpack.config.js
