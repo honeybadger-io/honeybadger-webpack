@@ -38,7 +38,7 @@ class HoneybadgerSourceMapPlugin {
     this.emittedAssets = new Map()
 
     /** @type DeployObject */
-    this.deploy = deploy;
+    this.deploy = deploy
 
     this.retries = retries
 
@@ -57,6 +57,7 @@ class HoneybadgerSourceMapPlugin {
 
     try {
       await this.uploadSourceMaps(compilation)
+      await this.sendDeployNotification()
     } catch (err) {
       if (!this.ignoreErrors) {
         compilation.errors.push(...handleError(err))
@@ -64,8 +65,6 @@ class HoneybadgerSourceMapPlugin {
         compilation.warnings.push(...handleError(err))
       }
     }
-
-    await this.sendDeployNotification()
   }
 
   apply (compiler) {
@@ -217,20 +216,25 @@ class HoneybadgerSourceMapPlugin {
       return
     }
 
-    const form = new FormData()
-    form.append('api_key', apiKey)
-    form.append('revision', revision)
-    form.append('repository', repository)
-    form.append('local_username', localUsername)
-    form.append('environment', environment)
-
     const errorMessage = 'Unable to send deploy notification to Honeybadger API.'
     let res
 
     try {
       res = await fetch(DEPLOY_ENDPOINT, {
         method: 'POST',
-        body: form,
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({
+          deploy: {
+            revision: revision,
+            repository: repository,
+            local_username: localUsername,
+            environment: environment
+          }
+        }),
         redirect: 'follow',
         opts: {
           retries: this.retries,

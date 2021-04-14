@@ -25,7 +25,12 @@ describe(PLUGIN_NAME, function () {
 
     this.options = {
       apiKey: 'abcd1234',
-      assetsUrl: 'https://cdn.example.com/assets'
+      assetsUrl: 'https://cdn.example.com/assets',
+      deploy: {
+        environment: 'production',
+        repository: 'https://cdn.example.com',
+        localUsername: 'bugs'
+      }
     }
 
     this.plugin = new HoneybadgerSourceMapPlugin(this.options)
@@ -52,6 +57,14 @@ describe(PLUGIN_NAME, function () {
 
     it('should default revision to "master"', function () {
       expect(this.plugin).to.include({ revision: 'master' })
+    })
+
+    it('should have deploy keys available', function () {
+      expect(this.plugin.deploy).to.include({
+        environment: 'production',
+        repository: 'https://cdn.example.com',
+        localUsername: 'bugs'
+      })
     })
 
     it('should default retries to 3', function () {
@@ -457,18 +470,38 @@ describe(PLUGIN_NAME, function () {
       await plugin.uploadSourceMap(compilation, chunk)
       expect(this.info.calledWith('Uploaded vendor.5190.js.map to Honeybadger API')).to.eq(true)
     })
+  })
 
-    describe('sendDeployNotification', function () {
-      it('should send a deploy notification if all keys are present', async function () {
-        const endpoint = 'https://api.honeybadger.io'
-        const plugin = new HoneybadgerSourceMapPlugin({ ...this.options })
-        nock(endpoint)
-          .post('/deploys')
-          .reply(201, JSON.stringify({ status: 'OK' }))
+  describe('sendDeployNotification', function () {
+    beforeEach(function () {
+      this.info = sinon.stub(console, 'info')
+    })
 
-        await plugin.sendDeployNotification()
-        expect(this.info.calledWith('')).to.eq(true)
-      })
+    afterEach(function () {
+      sinon.restore()
+    })
+
+    it('should send a deploy notification if all keys are present', async function () {
+      const endpoint = 'https://api.honeybadger.io'
+      const plugin = new HoneybadgerSourceMapPlugin({ ...this.options })
+      nock(endpoint)
+        .post('/v1/deploys')
+        .reply(201, JSON.stringify({ status: 'OK' }))
+
+      await plugin.sendDeployNotification()
+      expect(this.info.calledWith('Successfully sent deploy notification to Honeybadger API.')).to.eq(true)
+    })
+
+    it('should not send a deploy notification if a key is missing', async function () {
+      const options = this.options
+      delete options.deploy
+
+      const plugin = new HoneybadgerSourceMapPlugin({ ...options })
+
+      const spy = sinon.spy("fetch")
+
+      await plugin.sendDeployNotification()
+      expect(spy.called).to.eq(false)
     })
   })
 })
