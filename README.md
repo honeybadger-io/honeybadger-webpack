@@ -37,7 +37,7 @@ These plugin parameters correspond to the [Honeybadger Sourcemap API](https://do
   of honeybadger.</dd>
 
   <dt><code>revision</code> (optional &mdash; default: "master")</dt>
-  <dd>The deploy revision (i.e. commit sha) that your source map applies to. This could also be a code version. For best results, set it to something unique every time your code changes.</dd>
+  <dd>The deploy revision (i.e. commit sha) that your source map applies to. This could also be a code version. For best results, set it to something unique every time your code changes. [See the Honeybadger docs for examples.](https://docs.honeybadger.io/lib/javascript/guides/using-source-maps.html#versioning-your-project)</dd>
 
   <dt><code>silent</code> (optional &mdash; default: "null/false")</dt>
   <dd>If true, silence log information emitted by the plugin.</dd>
