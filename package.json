@@ -15,7 +15,8 @@
     "postversion": "git push && git push --tags",
     "lint": "standard ./{src,test}/**/*.js",
     "fix": "standard  --fix ./{src,test}/**/*.js",
-    "prepare": "cd node_modules/keepachangelog && npm install"
+    "prepare": "cd node_modules/keepachangelog && npm install",
+    "release": "shipjs prepare"
   },
   "repository": {
     "type": "git",
