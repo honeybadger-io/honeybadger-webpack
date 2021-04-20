@@ -2,7 +2,7 @@ name: Ship js Schedule Prepare
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  "Every Tuesday 11am"
+    - cron:  "0 19 * * 2"
 jobs:
   schedule_prepare:
     runs-on: ubuntu-latest
