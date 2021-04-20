@@ -1,10 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+## [1.4.0] - 2021-04-20
 ### Added
 - Add worker support when uploading sourcemaps. Defaults to 5 files
   being uploaded in parallel.
@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add a retry option that defaults to 3, with a max number of retries
   of 10.
 - Add a warning if no assets will be uploaded. Uses console.info instead
-of process.stdout.write.
+  of process.stdout.write.
 - Add a configurable `endpoint` to the constructor, defaults to
   `https://api.honeybadger.io/v1/source_maps`
 - Add a check for auxiliary files for Webpack 5 compatibility
