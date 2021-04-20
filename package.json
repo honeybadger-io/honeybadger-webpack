@@ -15,7 +15,8 @@
     "version": "scripts/update-versions.sh",
     "postversion": "git push && git push --tags",
     "lint": "standard ./{src,test}/**/*.js",
-    "fix": "standard  --fix ./{src,test}/**/*.js"
+    "fix": "standard  --fix ./{src,test}/**/*.js",
+    "prepare": "cd node_modules/keepachangelog && npm install"
   },
   "repository": {
     "type": "git",
@@ -45,10 +46,12 @@
     "cross-env": "^7.0.0",
     "debug": "^4.1.0",
     "husky": "^6.0.0",
+    "keepachangelog": "github:honeybadger-io/keepachangelog#release",
     "lodash": "^4.17.21",
     "mocha": "^8.3.1",
     "nock": "^13.0.11",
     "rimraf": "^3.0.2",
+    "shipjs": "^0.23.2",
     "sinon": "^10.0.0",
     "standard": "^16.0.3",
     "watch": "^1.0.2"
