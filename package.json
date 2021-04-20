@@ -12,7 +12,6 @@
     "test": "mocha",
     "test:watch": "npm test -- -w",
     "preversion": "npm test",
-    "version": "scripts/update-versions.sh",
     "postversion": "git push && git push --tags",
     "lint": "standard ./{src,test}/**/*.js",
     "fix": "standard  --fix ./{src,test}/**/*.js",
