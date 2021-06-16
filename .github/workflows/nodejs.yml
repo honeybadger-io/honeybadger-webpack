@@ -30,7 +30,7 @@ jobs:
           ${{ runner.os }}-node-
     - name: npm install, build, and test
       run: |
-        npm i --engine-strict
+        npm i
         npm run build --if-present
         npm run lint
         npm test
