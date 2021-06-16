@@ -13,7 +13,7 @@
     "test:watch": "npm test -- -w",
     "preversion": "npm test",
     "postversion": "git push && git push --tags",
-    "lint": "standard ./{src,test}/**/*.js",
+    "lint": "standard ./src/**/*.js ./test/*.js",
     "fix": "standard --fix ./src/**/*.js ./test/*.js",
     "prepare": "cd node_modules/keepachangelog && npm install",
     "release": "shipjs prepare"
