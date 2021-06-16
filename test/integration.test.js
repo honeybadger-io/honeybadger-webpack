@@ -7,7 +7,7 @@ import path from 'path'
 
 const expect = chai.expect
 
-const ASSETS_URL = 'https://cdn.example.com/assets';
+const ASSETS_URL = 'https://cdn.example.com/assets'
 
 const webpackConfig = {
   mode: 'production',
@@ -28,18 +28,18 @@ const webpackConfig = {
 }
 
 // Mock console.info so we can assert on Honeybadger plugin output
-const consoleOutput = [];
-const originalConsoleInfo = console.info.bind(console);
+const consoleOutput = []
+const originalConsoleInfo = console.info.bind(console)
 console.info = (thing) => {
   consoleOutput.push(thing)
   originalConsoleInfo(thing)
 }
 
-it('it successfully uploads source maps', function(done) {
+it('it successfully uploads source maps', function (done) {
   this.timeout(4000)
 
   webpack(webpackConfig, (err, stats) => {
-    expect(err).to.be.null
+    expect(err).to.eq(null)
 
     const info = stats.toJson('errors-warnings')
     expect(info.errors.length).to.equal(0)
