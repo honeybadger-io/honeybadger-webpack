@@ -45,7 +45,7 @@
     "chai": "^4.3.4",
     "cross-env": "^7.0.0",
     "debug": "^4.1.0",
-    "keepachangelog": "https://github.com/honeybadger-io/keepachangelog#release",
+    "keepachangelog": "git+https://github.com/honeybadger-io/keepachangelog#release",
     "lodash": "^4.17.21",
     "mocha": "^8.4.0",
     "nock": "^13.1.0",
