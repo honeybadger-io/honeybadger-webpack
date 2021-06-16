@@ -53,7 +53,8 @@
     "shipjs": "^0.23.2",
     "sinon": "^10.0.0",
     "standard": "^16.0.3",
-    "watch": "^1.0.2"
+    "watch": "^1.0.2",
+    "webpack": "^5.39.0"
   },
   "dependencies": {
     "@babel/runtime": "^7.14.0",

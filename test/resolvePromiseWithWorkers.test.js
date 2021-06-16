@@ -80,11 +80,11 @@ describe('resolvePromiseWithWorkers', function () {
       () =>
         asyncPromiseGenerator(
           'Second',
-          10 /* A very long promise that should keep a worker busy */,
+          50 /* A very long promise that should keep a worker busy */,
           spy
         ),
       () => asyncPromiseGenerator('Third', 1, spy),
-      () => asyncPromiseGenerator('Forth', 1, spy)
+      () => asyncPromiseGenerator('Fourth', 1, spy)
     ]
 
     await resolvePromiseWithWorkers(promisesWithCallback, 2)
@@ -94,8 +94,8 @@ describe('resolvePromiseWithWorkers', function () {
       'resolve First',
       'start Third',
       'resolve Third',
-      'start Forth',
-      'resolve Forth',
+      'start Fourth',
+      'resolve Fourth',
       'resolve Second'
     ]
     assertCallSequence(spy, sequence)
