@@ -7,7 +7,8 @@ import find from 'lodash.find'
 import reduce from 'lodash.reduce'
 import FormData from 'form-data'
 import { handleError, validateOptions } from './helpers'
-import { ENDPOINT, DEPLOY_ENDPOINT, PLUGIN_NAME, MAX_RETRIES } from './constants'
+import { ENDPOINT, DEPLOY_ENDPOINT, PLUGIN_NAME, MAX_RETRIES, MIN_WORKER_COUNT } from './constants'
+import { resolvePromiseWithWorkers } from './resolvePromiseWithWorkers'
 
 const fetch = fetchRetry(nodeFetch)
 
@@ -27,6 +28,7 @@ class HoneybadgerSourceMapPlugin {
     silent = false,
     ignoreErrors = false,
     retries = 3,
+    workerCount = 5,
     deploy = {}
   }) {
     this.apiKey = apiKey
@@ -36,10 +38,9 @@ class HoneybadgerSourceMapPlugin {
     this.silent = silent
     this.ignoreErrors = ignoreErrors
     this.emittedAssets = new Map()
-
+    this.workerCount = Math.max(workerCount, MIN_WORKER_COUNT)
     /** @type DeployObject */
     this.deploy = deploy
-
     this.retries = retries
 
     if (this.retries > MAX_RETRIES) {
@@ -200,8 +201,11 @@ class HoneybadgerSourceMapPlugin {
 
     console.info('\n')
 
-    return Promise.all(
-      assets.map(asset => this.uploadSourceMap(compilation, asset))
+    // On large projects source maps should not all be uploaded at the same time,
+    // but in parallel with a reasonable worker count in order to avoid network issues
+    return resolvePromiseWithWorkers(
+      assets.map(asset => () => this.uploadSourceMap(compilation, asset)),
+      this.workerCount
     )
   }
 
