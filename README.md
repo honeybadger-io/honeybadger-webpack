@@ -64,7 +64,8 @@ These plugin parameters correspond to the Honeybadger [Source Map Upload API](ht
     <dd>The environment name, for example, "production"</dd>
     <dt><code>repository</code></dt>
     <dd>The base URL of the VCS repository (HTTPS-style), for example, "https://github.com/yourusername/yourrepo"</dd>
-    <dt><code>localUsername</code></dt> <dd>The name of the user that triggered this deploy, for example, "Jane"</dd>
+    <dt><code>localUsername</code></dt>
+    <dd>The name of the user that triggered this deploy, for example, "Jane"</dd>
   </dl>
   </dd>
 </dl>
