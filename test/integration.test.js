@@ -21,7 +21,7 @@ it('only uploads source maps if no deploy config', function (done) {
     .reply(201, JSON.stringify({ status: 'OK' }))
 
   const webpackConfig = {
-    mode: 'production',
+    mode: 'development',
     entry: path.join(__dirname, 'fixtures/uncompiled.js'),
     output: {
       path: path.join(__dirname, '../tmp/')
@@ -56,7 +56,7 @@ it('uploads source maps and sends deployment notification if configured', functi
     .reply(201, JSON.stringify({ status: 'OK' }))
 
   const webpackConfig = {
-    mode: 'production',
+    mode: 'development',
     entry: path.join(__dirname, 'fixtures/uncompiled.js'),
     output: {
       path: path.join(__dirname, '../tmp/')
