@@ -19,7 +19,7 @@ npm install @honeybadger-io/webpack --save-dev
 
 ### Plugin parameters
 
-These plugin parameters correspond to the Honeybadger [Source Map Upload API](https://docs.honeybadger.io/guides/source-maps.html) and [Deployments API]().
+These plugin parameters correspond to the Honeybadger [Source Map Upload API](https://docs.honeybadger.io/guides/source-maps.html) and [Deployments API](https://docs.honeybadger.io/api/deployments.html).
 
 <dl>
   <dt><code>apiKey</code> (required)</dt>
