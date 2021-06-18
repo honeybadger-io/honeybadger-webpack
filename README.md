@@ -3,16 +3,13 @@
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fhoneybadger-io%2Fhoneybadger-webpack%2Fbadge%3Fref%3Dmaster&style=flat)](https://actions-badge.atrox.dev/honeybadger-io/honeybadger-webpack/goto?ref=master)
 [![npm version](https://badge.fury.io/js/%40honeybadger-io%2Fwebpack.svg)](https://badge.fury.io/js/%40honeybadger-io%2Fwebpack)
 
-This is a [webpack](https://webpack.js.org/) plugin to upload javascript
-sourcemaps to [Honeybadger's](https://honeybadger.io/)
-[API endpoint for source maps](https://docs.honeybadger.io/guides/source-maps.html).
+[Webpack](https://webpack.js.org/) plugin to upload JavaScript
+sourcemaps to [Honeybadger](https://docs.honeybadger.io/guides/source-maps.html). You can also send [deployment notifications](https://docs.honeybadger.io/api/deployments.html).
 
 Word Up! to the [thredUP](https://github.com/thredup) development team for a
 similar webpack plugin they have authored.
 
 ## Installation
-
-Installing via Node.js
 
 ```
 npm install @honeybadger-io/webpack --save-dev
@@ -22,7 +19,7 @@ npm install @honeybadger-io/webpack --save-dev
 
 ### Plugin parameters
 
-These plugin parameters correspond to the [Honeybadger Sourcemap API](https://docs.honeybadger.io/guides/source-maps.html).
+These plugin parameters correspond to the Honeybadger [Source Map Upload API](https://docs.honeybadger.io/guides/source-maps.html) and [Deployments API]().
 
 <dl>
   <dt><code>apiKey</code> (required)</dt>
@@ -42,7 +39,7 @@ These plugin parameters correspond to the [Honeybadger Sourcemap API](https://do
   <dt><code>silent</code> (optional &mdash; default: "null/false")</dt>
   <dd>If true, silence log information emitted by the plugin.</dd>
 
-  <dt><code>ignoreErrors</code> (optional &mdash; default: "null/false")</dt>
+  <dt><code>ignoreErrors</code> (optional &mdash; default: false)</dt>
   <dd>If true, webpack compilation errors are treated as warnings.</dd>
 
   <dt><code>retries</code> (optional &mdash; default: 3, max: 10)</dt>
@@ -57,6 +54,19 @@ These plugin parameters correspond to the [Honeybadger Sourcemap API](https://do
   workers. Increase or decrease this value to configure how many sourcemaps
   are being uploaded in parallel.</br>
   Limited parallelism helps with connection issues in Docker environments.</dd>
+
+  <dt><code>deploy</code> (optional)</dt>
+  <dd>
+  Configuration for deployment notifications. To disable deployment notifications, ignore this option. To enable deployment notifications, set this to <code>true</code>, or to an object containing any of these fields (see the <a href="https://docs.honeybadger.io/api/deployments.html">API reference</a>):</br>
+
+  <dl>
+    <dt><code>environment</code></dt>
+    <dd>The environment name, for example, "production"</dd>
+    <dt><code>repository</code></dt>
+    <dd>The base URL of the VCS repository (HTTPS-style), for example, "https://github.com/yourusername/yourrepo"</dd>
+    <dt><code>localUsername</code></dt> <dd>The name of the user that triggered this deploy, for example, "Jane"</dd>
+  </dl>
+  </dd>
 </dl>
 
 ### Vanilla webpack.config.js
@@ -68,7 +78,12 @@ const webpackConfig = {
   plugins: [new HoneybadgerSourceMapPlugin({
     apiKey: 'abc123',
     assetsUrl: ASSETS_URL,
-    revision: 'master'
+    revision: 'master',
+    // You can also enable deployment notifications:
+    deploy: {
+       environment: process.env.NODE_ENV,
+       repository: "https://github.com/yourusername/yourrepo"
+    }
   })]
 }
 ```
