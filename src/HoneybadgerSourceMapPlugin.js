@@ -29,7 +29,7 @@ class HoneybadgerSourceMapPlugin {
     ignoreErrors = false,
     retries = 3,
     workerCount = 5,
-    deploy = {}
+    deploy = false
   }) {
     this.apiKey = apiKey
     this.assetsUrl = assetsUrl
@@ -210,14 +210,27 @@ class HoneybadgerSourceMapPlugin {
   }
 
   async sendDeployNotification () {
-    const { environment, localUsername, repository } = this.deploy
-    const { apiKey, revision } = this
-
-    const isNull = (param) => param == null
-
-    // If any of the keys are null, dont bother sending a fetch request
-    if ([apiKey, revision, environment, localUsername, repository].some(isNull)) {
+    if (this.deploy === false || this.apiKey == null) {
       return
+    }
+
+    let body
+
+    if (this.deploy === true) {
+      body = {
+        deploy: {
+          revision: this.revision
+        }
+      }
+    } else if (typeof this.deploy === 'object' && this.deploy !== null) {
+      body = {
+        deploy: {
+          revision: this.revision,
+          repository: this.deploy.repository,
+          local_username: this.deploy.localUsername,
+          environment: this.deploy.environment
+        }
+      }
     }
 
     const errorMessage = 'Unable to send deploy notification to Honeybadger API.'
@@ -227,18 +240,11 @@ class HoneybadgerSourceMapPlugin {
       res = await fetch(DEPLOY_ENDPOINT, {
         method: 'POST',
         headers: {
-          'X-API-KEY': apiKey,
+          'X-API-KEY': this.apiKey,
           'Content-Type': 'application/json',
           Accept: 'application/json'
         },
-        body: JSON.stringify({
-          deploy: {
-            revision: revision,
-            repository: repository,
-            local_username: localUsername,
-            environment: environment
-          }
-        }),
+        body: JSON.stringify(body),
         redirect: 'follow',
         opts: {
           retries: this.retries,

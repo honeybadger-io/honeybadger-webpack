@@ -497,16 +497,21 @@ describe(PLUGIN_NAME, function () {
       expect(this.info.calledWith('Successfully sent deploy notification to Honeybadger API.')).to.eq(true)
     })
 
-    it('should not send a deploy notification if a key is missing', async function () {
-      const options = Object.assign({}, this.options, { deploy: {} })
+    it('should send a deploy notification with defaults if deploy is true', async function () {
+      const options = {
+        apiKey: 'abcd1234',
+        assetsUrl: 'https://cdn.example.com/assets',
+        deploy: true,
+        revision: 'o8y787g26574t4'
+      }
       const plugin = new HoneybadgerSourceMapPlugin({ ...options })
 
       const scope = nock(TEST_ENDPOINT)
-        .post(DEPLOY_PATH)
+        .post(DEPLOY_PATH, { deploy: { revision: options.revision } })
         .reply(201, JSON.stringify({ status: 'OK' }))
 
       await plugin.sendDeployNotification()
-      expect(scope.isDone()).to.eq(false)
+      expect(scope.isDone()).to.eq(true)
     })
   })
 })
