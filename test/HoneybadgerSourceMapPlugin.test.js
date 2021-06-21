@@ -12,6 +12,7 @@ const expect = chai.expect
 
 const TEST_ENDPOINT = 'https://api.honeybadger.io'
 const SOURCEMAP_PATH = '/v1/source_maps'
+const DEPLOY_PATH = '/v1/deploys'
 
 describe(PLUGIN_NAME, function () {
   beforeEach(function () {
@@ -466,10 +467,51 @@ describe(PLUGIN_NAME, function () {
       await plugin.uploadSourceMap(compilation, chunk)
       expect(this.info.calledWith('Uploaded vendor.5190.js.map to Honeybadger API')).to.eq(true)
     })
+  })
 
-    // TODO: Nock doesnt play nicely with fetchRetry so unfortunately, it doesnt appear possible
-    // to mock the functionality short of having a server listen for responses.
-    // We could rewrite add MSW, but not sure its worth the hassle considering we're
-    // essentially testing the package
+  describe('sendDeployNotification', function () {
+    beforeEach(function () {
+      this.info = sinon.stub(console, 'info')
+    })
+
+    afterEach(function () {
+      sinon.restore()
+    })
+
+    it('should send a deploy notification if all keys are present', async function () {
+      const options = {
+        apiKey: 'abcd1234',
+        assetsUrl: 'https://cdn.example.com/assets',
+        deploy: {
+          environment: 'production',
+          repository: 'https://cdn.example.com',
+          localUsername: 'bugs'
+        }
+      }
+      const plugin = new HoneybadgerSourceMapPlugin({ ...options })
+      nock(TEST_ENDPOINT)
+        .post(DEPLOY_PATH)
+        .reply(201, JSON.stringify({ status: 'OK' }))
+
+      await plugin.sendDeployNotification()
+      expect(this.info.calledWith('Successfully sent deploy notification to Honeybadger API.')).to.eq(true)
+    })
+
+    it('should send a deploy notification with defaults if deploy is true', async function () {
+      const options = {
+        apiKey: 'abcd1234',
+        assetsUrl: 'https://cdn.example.com/assets',
+        deploy: true,
+        revision: 'o8y787g26574t4'
+      }
+      const plugin = new HoneybadgerSourceMapPlugin({ ...options })
+
+      const scope = nock(TEST_ENDPOINT)
+        .post(DEPLOY_PATH, { deploy: { revision: options.revision } })
+        .reply(201, JSON.stringify({ status: 'OK' }))
+
+      await plugin.sendDeployNotification()
+      expect(scope.isDone()).to.eq(true)
+    })
   })
 })

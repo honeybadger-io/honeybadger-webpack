@@ -7,10 +7,17 @@ import find from 'lodash.find'
 import reduce from 'lodash.reduce'
 import FormData from 'form-data'
 import { handleError, validateOptions } from './helpers'
-import { ENDPOINT, PLUGIN_NAME, MAX_RETRIES, MIN_WORKER_COUNT } from './constants'
+import { ENDPOINT, DEPLOY_ENDPOINT, PLUGIN_NAME, MAX_RETRIES, MIN_WORKER_COUNT } from './constants'
 import { resolvePromiseWithWorkers } from './resolvePromiseWithWorkers'
 
 const fetch = fetchRetry(nodeFetch)
+
+/**
+ * @typedef {Object} DeployObject
+ * @property {?string} environment - production, development, staging, etc
+ * @property {?string} repository - URL for repository IE: https://github.com/foo/bar
+ * @property {?string} localUsername - The name of the user deploying. IE: Jane
+ */
 
 class HoneybadgerSourceMapPlugin {
   constructor ({
@@ -21,7 +28,8 @@ class HoneybadgerSourceMapPlugin {
     silent = false,
     ignoreErrors = false,
     retries = 3,
-    workerCount = 5
+    workerCount = 5,
+    deploy = false
   }) {
     this.apiKey = apiKey
     this.assetsUrl = assetsUrl
@@ -30,13 +38,14 @@ class HoneybadgerSourceMapPlugin {
     this.silent = silent
     this.ignoreErrors = ignoreErrors
     this.emittedAssets = new Map()
-
+    this.workerCount = Math.max(workerCount, MIN_WORKER_COUNT)
+    /** @type DeployObject */
+    this.deploy = deploy
     this.retries = retries
+
     if (this.retries > MAX_RETRIES) {
       this.retries = 10
     }
-
-    this.workerCount = Math.max(workerCount, MIN_WORKER_COUNT)
   }
 
   async afterEmit (compilation) {
@@ -49,6 +58,7 @@ class HoneybadgerSourceMapPlugin {
 
     try {
       await this.uploadSourceMaps(compilation)
+      await this.sendDeployNotification()
     } catch (err) {
       if (!this.ignoreErrors) {
         compilation.errors.push(...handleError(err))
@@ -197,6 +207,82 @@ class HoneybadgerSourceMapPlugin {
       assets.map(asset => () => this.uploadSourceMap(compilation, asset)),
       this.workerCount
     )
+  }
+
+  async sendDeployNotification () {
+    if (this.deploy === false || this.apiKey == null) {
+      return
+    }
+
+    let body
+
+    if (this.deploy === true) {
+      body = {
+        deploy: {
+          revision: this.revision
+        }
+      }
+    } else if (typeof this.deploy === 'object' && this.deploy !== null) {
+      body = {
+        deploy: {
+          revision: this.revision,
+          repository: this.deploy.repository,
+          local_username: this.deploy.localUsername,
+          environment: this.deploy.environment
+        }
+      }
+    }
+
+    const errorMessage = 'Unable to send deploy notification to Honeybadger API.'
+    let res
+
+    try {
+      res = await fetch(DEPLOY_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': this.apiKey,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify(body),
+        redirect: 'follow',
+        opts: {
+          retries: this.retries,
+          // Max timeout between retries, in milliseconds
+          maxTimeout: 1000
+        }
+      })
+    } catch (err) {
+      // network / operational errors. Does not include 404 / 500 errors
+      if (!this.ignoreErrors) {
+        throw new VError(err, errorMessage)
+      }
+    }
+
+    // >= 400 responses
+    if (!res.ok) {
+      // Attempt to parse error details from response
+      let details
+      try {
+        const body = await res.json()
+
+        if (body && body.error) {
+          details = body.error
+        } else {
+          details = `${res.status} - ${res.statusText}`
+        }
+      } catch (parseErr) {
+        details = `${res.status} - ${res.statusText}`
+      }
+
+      if (!this.ignoreErrors) {
+        throw new Error(`${errorMessage}: ${details}`)
+      }
+    }
+
+    if (!this.silent) {
+      console.info('Successfully sent deploy notification to Honeybadger API.')
+    }
   }
 
   get noAssetsFoundMessage () {
