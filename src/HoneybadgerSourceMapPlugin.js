@@ -37,18 +37,25 @@ class HoneybadgerSourceMapPlugin {
     this.revision = revision
     this.silent = silent
     this.ignoreErrors = ignoreErrors
-    this.emittedAssets = new Map()
     this.workerCount = Math.max(workerCount, MIN_WORKER_COUNT)
-    /** @type DeployObject */
+    /** @type DeployObject|boolean */
     this.deploy = deploy
     this.retries = retries
 
     if (this.retries > MAX_RETRIES) {
-      this.retries = 10
+      this.retries = MAX_RETRIES
     }
   }
 
   async afterEmit (compilation) {
+    if (this.isDevServerRunning()) {
+      if (!this.silent) {
+        console.info('\nHoneybadgerSourceMapPlugin will not upload source maps because webpack-dev-server is running.')
+      }
+
+      return
+    }
+
     const errors = validateOptions(this)
 
     if (errors) {
@@ -66,6 +73,10 @@ class HoneybadgerSourceMapPlugin {
         compilation.warnings.push(...handleError(err))
       }
     }
+  }
+
+  isDevServerRunning () {
+    return process.env.WEBPACK_DEV_SERVER === 'true'
   }
 
   apply (compiler) {
