@@ -63,7 +63,7 @@
     "lodash.find": "^4.3.0",
     "lodash.foreach": "^4.2.0",
     "lodash.reduce": "^4.3.0",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^3.2.2",
     "verror": "^1.6.1"
   },
   "peerDependencies": {
