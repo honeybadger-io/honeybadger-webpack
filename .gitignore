@@ -4,4 +4,3 @@ tmp
 *.log
 .nyc_output
 coverage.lcov
-package-lock.json
