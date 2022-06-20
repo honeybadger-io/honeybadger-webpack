@@ -157,7 +157,7 @@ class HoneybadgerSourceMapPlugin {
         body: form,
         redirect: 'follow',
         retry: this.retries,
-        pause: 1000,
+        pause: 1000
       })
     } catch (err) {
       // network / operational errors. Does not include 404 / 500 errors
@@ -252,7 +252,7 @@ class HoneybadgerSourceMapPlugin {
         body: JSON.stringify(body),
         redirect: 'follow',
         retry: this.retries,
-        pause: 1000,
+        pause: 1000
       })
     } catch (err) {
       // network / operational errors. Does not include 404 / 500 errors
