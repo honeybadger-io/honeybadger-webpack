@@ -1,7 +1,6 @@
 import { promises as fs } from 'fs'
 import { join } from 'path'
-import nodeFetch from 'node-fetch'
-import fetchRetry from '@vercel/fetch-retry'
+import fetch from 'node-fetch-retry'
 import VError from 'verror'
 import find from 'lodash.find'
 import reduce from 'lodash.reduce'
@@ -9,8 +8,6 @@ import FormData from 'form-data'
 import { handleError, validateOptions } from './helpers'
 import { ENDPOINT, DEPLOY_ENDPOINT, PLUGIN_NAME, MAX_RETRIES, MIN_WORKER_COUNT } from './constants'
 import { resolvePromiseWithWorkers } from './resolvePromiseWithWorkers'
-
-const fetch = fetchRetry(nodeFetch)
 
 /**
  * @typedef {Object} DeployObject
@@ -159,11 +156,8 @@ class HoneybadgerSourceMapPlugin {
         method: 'POST',
         body: form,
         redirect: 'follow',
-        opts: {
-          retries: this.retries,
-          // Max timeout between retries, in milliseconds
-          maxTimeout: 1000
-        }
+        retry: this.retries,
+        pause: 1000
       })
     } catch (err) {
       // network / operational errors. Does not include 404 / 500 errors
@@ -257,11 +251,8 @@ class HoneybadgerSourceMapPlugin {
         },
         body: JSON.stringify(body),
         redirect: 'follow',
-        opts: {
-          retries: this.retries,
-          // Max timeout between retries, in milliseconds
-          maxTimeout: 1000
-        }
+        retry: this.retries,
+        pause: 1000
       })
     } catch (err) {
       // network / operational errors. Does not include 404 / 500 errors
