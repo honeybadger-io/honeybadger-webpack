@@ -3,6 +3,8 @@
 [![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fhoneybadger-io%2Fhoneybadger-webpack%2Fbadge%3Fref%3Dmaster&style=flat)](https://actions-badge.atrox.dev/honeybadger-io/honeybadger-webpack/goto?ref=master)
 [![npm version](https://badge.fury.io/js/%40honeybadger-io%2Fwebpack.svg)](https://badge.fury.io/js/%40honeybadger-io%2Fwebpack)
 
+> **Note:** This repository has been moved to [@honeybadger-io/js](https://github.com/honeybadger-io/honeybadger-js), home to all Honeybadger's JavaScript packages.
+
 [Webpack](https://webpack.js.org/) plugin to upload JavaScript
 sourcemaps to [Honeybadger](https://docs.honeybadger.io/guides/source-maps.html). You can also send [deployment notifications](https://docs.honeybadger.io/api/deployments.html).
 
